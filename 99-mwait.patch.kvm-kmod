@@ -1,0 +1,64 @@
+MacOS X needs, we give! Needs some more bits for SMP correctness, though, ...
+
+  - Rene Rebe <rene@exactcode.de>
+
+diff -ur kvm-kmod-2.6.33.3/x86/external-module-compat.h kvm-kmod-2.6.33.3-new/x86/external-module-compat.h
+--- kvm-kmod-2.6.33.3/x86/external-module-compat.h	2010-04-27 08:55:30.000000000 +0200
++++ kvm-kmod-2.6.33.3-new/x86/external-module-compat.h	2010-05-23 17:20:38.000000000 +0200
+@@ -178,6 +178,10 @@
+ #define X86_FEATURE_SSSE3	(4*32+ 9) /* Supplemental SSE-3 */
+ #endif
+ 
++#ifndef X86_FEATURE_MONITOR
++#define X86_FEATURE_MONITOR	(4*32+ 3) /* Monitor / MWait */
++#endif
++
+ #ifndef X86_FEATURE_XMM4_1
+ #define X86_FEATURE_XMM4_1	(4*32+19) /* "sse4_1" SSE-4.1 */
+ #endif
+diff -ur kvm-kmod-2.6.38.6/x86/svm.c kvm-kmod-2.6.38.6-new/x86/svm.c
+--- kvm-kmod-2.6.38.6/x86/svm.c.orig	2011-05-15 07:34:55.000000000 +0000
++++ kvm-kmod-2.6.38.6/x86/svm.c	2011-05-15 11:43:54.000000000 +0000
+@@ -980,8 +980,8 @@
+ 	set_intercept(svm, INTERCEPT_CLGI);
+ 	set_intercept(svm, INTERCEPT_SKINIT);
+ 	set_intercept(svm, INTERCEPT_WBINVD);
+-	set_intercept(svm, INTERCEPT_MONITOR);
+-	set_intercept(svm, INTERCEPT_MWAIT);
++	//set_intercept(svm, INTERCEPT_MONITOR);
++	//set_intercept(svm, INTERCEPT_MWAIT);
+ 	set_intercept(svm, INTERCEPT_XSETBV);
+ 
+ 	control->iopm_base_pa = iopm_base;
+diff -ur kvm-kmod-2.6.33.3/x86/vmx.c kvm-kmod-2.6.33.3-new/x86/vmx.c
+--- kvm-kmod-3.3.6/x86/vmx.c	2012-05-14 18:56:07.000000000 +0000
++++ kvm-kmod-3.3.6-patched/x86/vmx.c	2012-05-17 10:38:13.594542988 +0000
+@@ -2020,7 +2020,7 @@
+ 	nested_vmx_procbased_ctls_high &=
+ 		CPU_BASED_VIRTUAL_INTR_PENDING | CPU_BASED_USE_TSC_OFFSETING |
+ 		CPU_BASED_HLT_EXITING | CPU_BASED_INVLPG_EXITING |
+-		CPU_BASED_MWAIT_EXITING | CPU_BASED_CR3_LOAD_EXITING |
++		CPU_BASED_CR3_LOAD_EXITING |
+ 		CPU_BASED_CR3_STORE_EXITING |
+ #ifdef CONFIG_X86_64
+ 		CPU_BASED_CR8_LOAD_EXITING | CPU_BASED_CR8_STORE_EXITING |
+@@ -2486,8 +2486,6 @@
+ 	      CPU_BASED_USE_IO_BITMAPS |
+ 	      CPU_BASED_MOV_DR_EXITING |
+ 	      CPU_BASED_USE_TSC_OFFSETING |
+-	      CPU_BASED_MWAIT_EXITING |
+-	      CPU_BASED_MONITOR_EXITING |
+ 	      CPU_BASED_INVLPG_EXITING |
+ 	      CPU_BASED_RDPMC_EXITING;
+ 
+--- kvm-kmod-3.3.6/x86/cpuid.c	2012-05-14 18:56:07.000000000 +0000
++++ kvm-kmod-3.3.6-patched/x86/cpuid.c	2012-05-17 10:38:35.334543506 +0000
+@@ -260,7 +260,7 @@
+ 		0 /* Reserved */ | f_lm | F(3DNOWEXT) | F(3DNOW);
+ 	/* cpuid 1.ecx */
+ 	const u32 kvm_supported_word4_x86_features =
+-		F(XMM3) | F(PCLMULQDQ) | 0 /* DTES64, MONITOR */ |
++		F(XMM3) | F(PCLMULQDQ) | F(MONITOR) /* DTES64 */ |
+ 		0 /* DS-CPL, VMX, SMX, EST */ |
+ 		0 /* TM2 */ | F(SSSE3) | 0 /* CNXT-ID */ | 0 /* Reserved */ |
+ 		F(FMA) | F(CX16) | 0 /* xTPR Update, PDCM */ |

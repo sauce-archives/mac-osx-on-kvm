@@ -1,0 +1,16 @@
+Only required for the latest, 10.6.x version, or SMP?
+(IIRC it worked before without, ...)
+
+  - Rene Rebe <rene@exactcode.de>
+
+--- qemu-kvm-0.12.5/hw/apic.c.vanilla	2011-02-19 13:04:30.000000000 +0000
++++ qemu-kvm-0.12.5/hw/apic.c	2011-02-19 13:04:36.000000000 +0000
+@@ -715,7 +715,7 @@
+         val = s->id << 24;
+         break;
+     case 0x03: /* version */
+-        val = 0x11 | ((APIC_LVT_NB - 1) << 16); /* version 0x11 */
++        val = 0x14 | ((APIC_LVT_NB - 1) << 16); /* version 0x14 */
+         break;
+     case 0x08:
+         val = s->tpr;

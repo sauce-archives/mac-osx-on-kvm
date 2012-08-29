@@ -1,0 +1,74 @@
+--- qemu-kvm-0.12.5/hw/e1000.c.vanilla	2011-02-19 12:28:38.000000000 +0000
++++ qemu-kvm-0.12.5/hw/e1000.c	2011-02-21 14:11:33.000000000 +0000
+@@ -199,6 +202,8 @@
+ {
+     /* RST is self clearing */
+     s->mac_reg[CTRL] = val & ~E1000_CTRL_RST;
++    if (val & E1000_CTRL_RST)
++	set_ics(s, 0, E1000_ICR_LSC);
+ }
+ 
+ static void
+@@ -231,8 +236,18 @@
+         if (!(phy_regcap[addr] & PHY_W)) {
+             DBGOUT(MDIC, "MDIC write reg %x unhandled\n", addr);
+             val |= E1000_MDIC_ERROR;
+-        } else
+-            s->phy_reg[addr] = data;
++        } else {
++	    /* some (reset) bits are self clearing, so better clear them */
++	    switch (addr) {
++	    case PHY_CTRL:
++		s->phy_reg[addr] = data & 0x7eff;
++		if (s->phy_reg[addr] != data)
++			set_ics(s, 0, E1000_ICR_LSC);
++		break;
++	    default:
++		s->phy_reg[addr] = data;
++	    }
++	}
+     }
+     s->mac_reg[MDIC] = val | E1000_MDIC_READY;
+ DBGOUT(MDIC, "mac_reg[MDIC] = %x\n", s->mac_reg[MDIC]);
+@@ -802,8 +807,13 @@
+ static void
+ set_ims(E1000State *s, int index, uint32_t val)
+ {
++    uint32_t old_val = s->mac_reg[IMS];
+     s->mac_reg[IMS] |= val;
+-    set_ics(s, 0, 0);
++    if ((val & E1000_ICR_LSC) && old_val == 0) {
++      set_ics(s, 0, E1000_ICR_LSC); /* inject Link Status for uncooperative Darwin driver */
++    } else {
++      set_ics(s, 0, 0); 
++    }
+ }
+ 
+ #define getreg(x)	[x] = mac_readreg
+@@ -810,7 +825,7 @@
+ static void (*macreg_writeops[])(E1000State *, int, uint32_t) = {
+     putreg(PBA),	putreg(EERD),	putreg(SWSM),	putreg(WUFC),
+     putreg(TDBAL),	putreg(TDBAH),	putreg(TXDCTL),	putreg(RDBAH),
+-    putreg(RDBAL),	putreg(LEDCTL), putreg(VET),
++    putreg(RDBAL),	putreg(LEDCTL), putreg(VET),	putreg(MANC),
+     [TDLEN] = set_dlen,	[RDLEN] = set_dlen,	[TCTL] = set_tctl,
+     [TDT] = set_tctl,	[MDIC] = set_mdic,	[ICS] = set_ics,
+     [TDH] = set_16bit,	[RDH] = set_16bit,	[RDT] = set_rdt,
+@@ -1059,6 +1059,7 @@
+ static void e1000_reset(void *opaque)
+ {
+     E1000State *d = opaque;
++    uint8_t *macaddr = d->eeprom_data;
+ 
+     memset(d->phy_reg, 0, sizeof d->phy_reg);
+     memmove(d->phy_reg, phy_reg_init, sizeof phy_reg_init);
+@@ -1066,6 +1067,9 @@
+     memmove(d->mac_reg, mac_reg_init, sizeof mac_reg_init);
+     d->rxbuf_min_shift = 1;
+     memset(&d->tx, 0, sizeof d->tx);
++
++    d->mac_reg[RA+0] = (macaddr[3] << 24) | (macaddr[2] << 16) | (macaddr[1] << 8) | macaddr[0];
++    d->mac_reg[RA+1] = E1000_RAH_AV | (macaddr[5] << 8) | macaddr[4];
+ }
+ 
+ static NetClientInfo net_e1000_info = {

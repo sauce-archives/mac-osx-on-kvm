@@ -1,0 +1,46 @@
+Mac OS X touches some MSRs that are not yet "white-listed", ignore them for now.
+
+kvm: cpu0 ignored rdmsr: 0xe2
+kvm: cpu0 ignored wrmsr: 0xe2 data 8
+kvm: cpu0 ignored rdmsr: 0xe2
+kvm: cpu0 ignored wrmsr: 0xe2 data 800
+kvm: cpu0 ignored rdmsr: 0xe2
+kvm: cpu0 ignored wrmsr: 0xe2 data 8
+kvm: cpu1 ignored rdmsr: 0xe2
+kvm: cpu1 ignored wrmsr: 0xe2 data 8
+kvm: cpu1 ignored rdmsr: 0xe2
+kvm: cpu1 ignored wrmsr: 0xe2 data 800
+
+  - Rene Rebe <rene@exactcode.de>
+
+--- kvm-kmod-2.6.37/x86/x86.c.vanilla	2011-02-22 15:37:22.357977769 +0000
++++ kvm-kmod-2.6.37/x86/x86.c	2011-02-22 15:43:04.605311459 +0000
+@@ -1593,6 +1593,9 @@
+ 		} else
+ 			return set_msr_hyperv(vcpu, msr, data);
+ 		break;
++	case 0xe2: /* PMG_CST_CONFIG_CONTROL */
++		;
++		break;
+ 	default:
+ 		if (msr && (msr == vcpu->kvm->arch.xen_hvm_config.msr))
+ 			return xen_hvm_config(vcpu, data);
+@@ -1600,6 +1603,8 @@
+ 			pr_unimpl(vcpu, "unhandled wrmsr: 0x%x data %llx\n",
+ 				msr, data);
+ 			return 1;
++		data = 0;
++		break;
+ 		} else {
+ 			pr_unimpl(vcpu, "ignored wrmsr: 0x%x data %llx\n",
+ 				msr, data);
+@@ -1844,6 +1849,9 @@
+ 		} else
+ 			return get_msr_hyperv(vcpu, msr, pdata);
+ 		break;
++	case 0xe2: /* PMG_CST_CONFIG_CONTROL */
++		data = 0;
++		break;
+ 	default:
+ 		if (!ignore_msrs) {
+ 			pr_unimpl(vcpu, "unhandled rdmsr: 0x%x\n", msr);

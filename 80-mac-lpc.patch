@@ -1,0 +1,11 @@
+--- qemu-kvm-0.14.0/hw/lpc.c.orig	2011-02-22 19:08:20.076000026 +0000
++++ qemu-kvm-0.14.0/hw/lpc.c	2011-02-22 19:07:22.300000026 +0000
+@@ -111,7 +111,7 @@
+     pci_conf[0x0a] = 0x01; // PCI-to-ISA Bridge
+     pci_conf[0x0b] = 0x06; // Bridge
+ 
+-    pci_conf[0x0e] = 0xf0;
++    pci_conf[0x0e] = 0x80; // Header type
+ 
+     // Subsystem
+     pci_conf[0x2c] = 0x86;
